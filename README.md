@@ -43,6 +43,9 @@ Backend docs: `http://localhost:8000/docs`
 
 Compose runs PostgreSQL, the FastAPI backend, and the Vite-built frontend.
 
+PostgreSQL is exposed only inside the Compose network to avoid conflicts with an existing local database on port `5432`.
+If you need host access for debugging, temporarily add a port mapping such as `"5433:5432"` to the `postgres` service.
+
 ## Configuration
 
 Important environment variables:

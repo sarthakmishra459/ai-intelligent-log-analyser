@@ -5,8 +5,8 @@ services:
       POSTGRES_DB: log_analysis
       POSTGRES_USER: log_analysis
       POSTGRES_PASSWORD: log_analysis
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
