@@ -155,7 +155,7 @@ class Settings(BaseSettings):
     def _resolve_database_path(self, database_url: str) -> Path | None:
         for prefix in ("sqlite+aiosqlite:///", "sqlite:///"):
             if database_url.startswith(prefix):
-                relative_path = database_url[len(prefix):]
+                relative_path = database_url[len(prefix) :]
                 if not relative_path or relative_path in {":memory:", "file::memory:?cache=shared"}:
                     return None
                 if relative_path.startswith("/") or relative_path.startswith("\\"):
@@ -169,7 +169,7 @@ class Settings(BaseSettings):
 
         for prefix in ("sqlite+aiosqlite:///", "sqlite:///"):
             if database_url.startswith(prefix):
-                relative_path = database_url[len(prefix):]
+                relative_path = database_url[len(prefix) :]
                 if not relative_path or relative_path in {":memory:", "file::memory:?cache=shared"}:
                     return database_url
                 if relative_path.startswith("/") or relative_path.startswith("\\"):
