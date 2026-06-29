@@ -246,102 +246,97 @@ export function App() {
           </Panel>
 
           <Panel title="Live Investigation">
-            {/* Single layout container holding all form elements */}
-            <div className="flex flex-col gap-3 md:grid md:grid-cols-12 md:items-center">
-              {/* Question dropdown (takes 4 columns on desktop) */}
-              <div className="md:col-span-4">
-                <select
-                  className="h-11 w-full rounded-md border border-line px-3"
-                  value={question}
-                  onChange={(event) => setQuestion(event.target.value)}
-                >
-                  {examples.map((example) => (
-                    <option key={example}>{example}</option>
-                  ))}
-                </select>
-              </div>
+  {/* Single layout container holding all form elements */}
+  <div className="flex flex-col gap-3 md:grid md:grid-cols-12 md:items-center">
+    
+    {/* Question dropdown (takes 4 columns on desktop) */}
+    <div className="md:col-span-4">
+      <select
+        className="h-11 w-full rounded-md border border-line px-3"
+        value={question}
+        onChange={(event) => setQuestion(event.target.value)}
+      >
+        {examples.map((example) => (
+          <option key={example}>{example}</option>
+        ))}
+      </select>
+    </div>
 
-              {/* Question input field (takes 8 columns on desktop) */}
-              <div className="md:col-span-8">
-                <input
-                  className="h-11 w-full rounded-md border border-line px-3"
-                  value={question}
-                  onChange={(event) => setQuestion(event.target.value)}
-                />
-              </div>
+    {/* Question input field (takes 8 columns on desktop) */}
+    <div className="md:col-span-8">
+      <input
+        className="h-11 w-full rounded-md border border-line px-3"
+        value={question}
+        onChange={(event) => setQuestion(event.target.value)}
+      />
+    </div>
 
-              {/* File select dropdown (takes 4 columns on desktop, lines up with the select above) */}
-              <div className="md:col-span-4">
-                <select
-                  className="h-11 w-full rounded-md border border-line px-3"
-                  value={selectedFileId ?? ""}
-                  onChange={(event) =>
-                    setSelectedFileId(event.target.value || null)
-                  }
-                >
-                  <option value="">All files</option>
-                  {files.map((file) => (
-                    <option key={file.id} value={file.id}>
-                      {file.filename}
-                    </option>
-                  ))}
-                </select>
-              </div>
+    {/* File select dropdown (takes 4 columns on desktop, lines up with the select above) */}
+    <div className="md:col-span-4">
+      <select
+        className="h-11 w-full rounded-md border border-line px-3"
+        value={selectedFileId ?? ""}
+        onChange={(event) => setSelectedFileId(event.target.value || null)}
+      >
+        <option value="">All files</option>
+        {files.map((file) => (
+          <option key={file.id} value={file.id}>
+            {file.filename}
+          </option>
+        ))}
+      </select>
+    </div>
 
-              {/* Investigate Button (takes 2 columns on desktop) */}
-              <div className="md:col-span-2">
-                <button
-                  className="h-11 w-full rounded-md bg-ink px-4 font-medium text-white disabled:opacity-50"
-                  disabled={busy}
-                  onClick={ask}
-                >
-                  Investigate
-                </button>
-              </div>
-            </div>
+    {/* Investigate Button (takes 2 columns on desktop) */}
+    <div className="md:col-span-2">
+      <button
+        className="h-11 w-full rounded-md bg-ink px-4 font-medium text-white disabled:opacity-50"
+        disabled={busy}
+        onClick={ask}
+      >
+        Investigate
+      </button>
+    </div>
 
-            {/* Status Steps Row */}
-            <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">
-              {["Planner", "Searching", "Reasoning", "Summary"].map((step) => (
-                <div
-                  key={step}
-                  className={`rounded-md border px-3 py-2 text-sm text-center md:text-left ${
-                    progress
-                      .join(" ")
-                      .toLowerCase()
-                      .includes(step.toLowerCase().replace("ing", ""))
-                      ? "border-accent bg-teal-50 text-accent"
-                      : "border-line bg-panel text-slate-600"
-                  }`}
-                >
-                  {step}
-                </div>
-              ))}
-            </div>
+  </div>
 
-            {/* Results Panel */}
-            {investigation?.answer ? (
-              <div className="mt-4 grid gap-3">
-                <p className="text-sm text-slate-700">
-                  {investigation.answer.incident_summary}
-                </p>
-                <div className="rounded-md border border-line bg-panel p-3 text-sm">
-                  <div className="font-semibold">Root cause</div>
-                  <div>{investigation.answer.root_cause}</div>
-                </div>
-                <div className="grid gap-2 md:grid-cols-2">
-                  {investigation.answer.recommendations.map((item) => (
-                    <div
-                      key={item}
-                      className="rounded-md border border-line p-3 text-sm"
-                    >
-                      {item}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </Panel>
+  {/* Status Steps Row */}
+  <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">
+    {["Planner", "Searching", "Reasoning", "Summary"].map((step) => (
+      <div
+        key={step}
+        className={`rounded-md border px-3 py-2 text-sm text-center md:text-left ${
+          progress.join(" ").toLowerCase().includes(step.toLowerCase().replace("ing", ""))
+            ? "border-accent bg-teal-50 text-accent"
+            : "border-line bg-panel text-slate-600"
+        }`}
+      >
+        {step}
+      </div>
+    ))}
+  </div>
+
+  {/* Results Panel */}
+  {investigation?.answer ? (
+    <div className="mt-4 grid gap-3">
+      <p className="text-sm text-slate-700">
+        {investigation.answer.incident_summary}
+      </p>
+      <div className="rounded-md border border-line bg-panel p-3 text-sm">
+        <div className="font-semibold">Root cause</div>
+        <div>{investigation.answer.root_cause}</div>
+      </div>
+      <div className="grid gap-2 md:grid-cols-2">
+        {investigation.answer.recommendations.map((item) => (
+          <div key={item} className="rounded-md border border-line p-3 text-sm">
+            {item}
+          </div>
+        ))}
+      </div>
+    </div>
+  ) : null}
+</Panel>
+
 
           <Panel title="Matching Logs">
             <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
