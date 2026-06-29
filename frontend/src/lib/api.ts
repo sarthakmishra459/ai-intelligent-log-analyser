@@ -1,6 +1,7 @@
 import type { Investigation, LogFile, Metrics, SearchResult } from "../types/api";
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? "/api/v1";
+const DEFAULT_API_BASE = typeof window !== "undefined" ? `${window.location.origin}/api/v1` : "/api/v1";
+const API_BASE = (import.meta.env.VITE_API_BASE ?? DEFAULT_API_BASE).replace(/\/$/, "");
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
