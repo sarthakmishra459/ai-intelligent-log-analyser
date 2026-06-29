@@ -7,6 +7,14 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
+def determine_project_root() -> Path:
+    current_file = Path(__file__).resolve()
+    for candidate in (current_file.parent, *current_file.parents):
+        if (candidate / "data").exists() or (candidate / "pyproject.toml").exists():
+            return candidate
+    return current_file.parents[2]
+
+
 class Settings(BaseSettings):
     """Runtime configuration loaded from environment variables."""
 
@@ -33,7 +41,7 @@ class Settings(BaseSettings):
     database_pool_size: int = Field(default=10, ge=1, le=100)
     database_max_overflow: int = Field(default=20, ge=0, le=100)
 
-    project_root: Path = Field(default_factory=lambda: Path(__file__).resolve().parents[3])
+    project_root: Path = Field(default_factory=determine_project_root)
     data_dir: Path = Path("data")
     upload_dir: Path = Path("data/uploads")
     demo_data_dir: Path = Path("data/demo_logs")
@@ -98,6 +106,10 @@ class Settings(BaseSettings):
         return self._resolve(self.data_dir)
 
     @property
+    def resolved_database_url(self) -> str:
+        return self._resolve_database_url(self.database_url)
+
+    @property
     def resolved_upload_dir(self) -> Path:
         return self._resolve(self.upload_dir)
 
@@ -130,10 +142,41 @@ class Settings(BaseSettings):
         ):
             directory.mkdir(parents=True, exist_ok=True)
 
+        if self.database_url.startswith("sqlite") and ":memory:" not in self.database_url:
+            resolved_database_path = self._resolve_database_path(self.database_url)
+            if resolved_database_path is not None:
+                resolved_database_path.parent.mkdir(parents=True, exist_ok=True)
+
     def _resolve(self, path: Path) -> Path:
         if path.is_absolute():
             return path
         return self.project_root / path
+
+    def _resolve_database_path(self, database_url: str) -> Path | None:
+        for prefix in ("sqlite+aiosqlite:///", "sqlite:///"):
+            if database_url.startswith(prefix):
+                relative_path = database_url[len(prefix):]
+                if not relative_path or relative_path in {":memory:", "file::memory:?cache=shared"}:
+                    return None
+                if relative_path.startswith("/") or relative_path.startswith("\\"):
+                    return Path(relative_path)
+                return self.project_root / relative_path
+        return None
+
+    def _resolve_database_url(self, database_url: str) -> str:
+        if not database_url.startswith("sqlite") or ":memory:" in database_url:
+            return database_url
+
+        for prefix in ("sqlite+aiosqlite:///", "sqlite:///"):
+            if database_url.startswith(prefix):
+                relative_path = database_url[len(prefix):]
+                if not relative_path or relative_path in {":memory:", "file::memory:?cache=shared"}:
+                    return database_url
+                if relative_path.startswith("/") or relative_path.startswith("\\"):
+                    return database_url
+                resolved_path = (self.project_root / relative_path).resolve()
+                return f"{prefix}{resolved_path.as_posix()}"
+        return database_url
 
 
 @lru_cache

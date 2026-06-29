@@ -19,7 +19,7 @@ if not settings.database_url.startswith("sqlite"):
             "max_overflow": settings.database_max_overflow,
         }
     )
-engine = create_async_engine(settings.database_url, **engine_kwargs)
+engine = create_async_engine(settings.resolved_database_url, **engine_kwargs)
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 
