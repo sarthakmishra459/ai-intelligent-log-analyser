@@ -25,6 +25,10 @@ export const api = {
   },
   index: () => request<{ files_indexed: number; chunks_created: number; embeddings_stored: number }>("/index", { method: "POST" }),
   search: (query: string) => request<SearchResult[]>("/search", { method: "POST", body: JSON.stringify({ query, limit: 10 }) }),
-  ask: (question: string) => request<Investigation>("/questions", { method: "POST", body: JSON.stringify({ question }) }),
+  ask: (question: string, file_id?: string | null) =>
+    request<Investigation>("/questions", {
+      method: "POST",
+      body: JSON.stringify({ question, file_id }),
+    }),
   docker: (container: string) => request<{ files: LogFile[]; auto_loaded_demo_data: boolean }>(`/docker/${encodeURIComponent(container)}`, { method: "POST" })
 };

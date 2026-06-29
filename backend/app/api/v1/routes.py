@@ -70,7 +70,7 @@ async def ask_question(
     request: QuestionRequest,
     service: LogAnalysisService = Depends(get_log_analysis_service),
 ) -> InvestigationRead:
-    investigation = await service.ask(request.question)
+    investigation = await service.ask(request.question, request.file_id)
     return InvestigationRead.model_validate(investigation, from_attributes=True)
 
 

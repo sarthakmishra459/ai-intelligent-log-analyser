@@ -159,22 +159,28 @@ class LogAnalysisService:
         logger.info("Indexed %s log chunks", indexed)
         return indexed
 
-    async def search(self, query: str, limit: int) -> list[SearchResult]:
+    async def search(self, query: str, limit: int, file_id: str | None = None) -> list[SearchResult]:
         await self.ensure_demo_data_loaded()
         query_embedding = await asyncio.to_thread(self.embeddings.embed_texts, [query])
-        vector_results = self.vector_store.search(query_embedding[0], limit)
+        vector_results = self.vector_store.search(query_embedding[0], max(limit, 50))
         if not vector_results:
             return []
         chunk_ids = [chunk_id for chunk_id, _score in vector_results]
         result = await self.session.execute(select(LogChunk).where(LogChunk.id.in_(chunk_ids)))
         chunks_by_id = {chunk.id: chunk for chunk in result.scalars().all()}
-        return [
-            SearchResult(chunk=LogChunkRead.model_validate(chunks_by_id[chunk_id]), score=score)
-            for chunk_id, score in vector_results
-            if chunk_id in chunks_by_id
-        ]
+        filtered = []
+        for chunk_id, score in vector_results:
+            chunk = chunks_by_id.get(chunk_id)
+            if chunk is None:
+                continue
+            if file_id is not None and chunk.file_id != file_id:
+                continue
+            filtered.append(SearchResult(chunk=LogChunkRead.model_validate(chunk), score=score))
+            if len(filtered) >= limit:
+                break
+        return filtered
 
-    async def ask(self, question: str) -> Investigation:
+    async def ask(self, question: str, file_id: str | None = None) -> Investigation:
         await self.ensure_demo_data_loaded()
         started = time.perf_counter()
         investigation = Investigation(question=question, status=InvestigationStatus.running)
@@ -182,7 +188,10 @@ class LogAnalysisService:
         await self.session.commit()
         await self.session.refresh(investigation)
 
-        graph = build_investigation_graph(self.search)
+        async def scoped_search(query: str, limit: int) -> list[SearchResult]:
+            return await self.search(query, limit, file_id)
+
+        graph = build_investigation_graph(scoped_search)
         try:
             state = await graph.ainvoke({"question": question, "events": []})
             summary: IncidentSummary = state["summary"]
@@ -216,7 +225,7 @@ class LogAnalysisService:
         await self.session.refresh(investigation)
         return investigation
 
-    async def ask_stream(self, question: str) -> AsyncIterator[dict]:
+    async def ask_stream(self, question: str, file_id: str | None = None) -> AsyncIterator[dict]:
         await self.ensure_demo_data_loaded()
         started = time.perf_counter()
         investigation = Investigation(question=question, status=InvestigationStatus.running)
@@ -224,7 +233,10 @@ class LogAnalysisService:
         await self.session.commit()
         await self.session.refresh(investigation)
 
-        graph = build_investigation_graph(self.search)
+        async def scoped_search(query: str, limit: int) -> list[SearchResult]:
+            return await self.search(query, limit, file_id)
+
+        graph = build_investigation_graph(scoped_search)
         final_state = None
         try:
             async for update in graph.astream({"question": question, "events": []}):
