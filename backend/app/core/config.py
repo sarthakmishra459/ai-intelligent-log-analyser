@@ -1,0 +1,134 @@
+from functools import lru_cache
+from pathlib import Path
+from typing import Literal
+
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """Runtime configuration loaded from environment variables."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    app_name: str = "Intelligent Log Analysis Platform"
+    app_environment: Literal["local", "test", "staging", "production"] = "local"
+    api_prefix: str = "/api/v1"
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+
+    cors_origins: list[str] = Field(
+        default_factory=lambda: [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        ]
+    )
+
+    database_url: str = "sqlite+aiosqlite:///./data/log_analysis.db"
+    database_pool_size: int = Field(default=10, ge=1, le=100)
+    database_max_overflow: int = Field(default=20, ge=0, le=100)
+
+    project_root: Path = Field(default_factory=lambda: Path(__file__).resolve().parents[3])
+    data_dir: Path = Path("data")
+    upload_dir: Path = Path("data/uploads")
+    demo_data_dir: Path = Path("data/demo_logs")
+    faiss_index_dir: Path = Path("data/faiss")
+
+    max_upload_size_mb: int = Field(default=100, ge=1, le=1024)
+    allowed_log_extensions: set[str] = Field(
+        default_factory=lambda: {".log", ".txt", ".out", ".err", ".json", ".ndjson"}
+    )
+
+    chunk_target_lines: int = Field(default=80, ge=10, le=1000)
+    chunk_overlap_lines: int = Field(default=10, ge=0, le=250)
+    max_search_results: int = Field(default=12, ge=1, le=100)
+
+    embedding_provider: Literal["local", "openai", "deterministic"] = "local"
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    embedding_dimension: int = Field(default=384, ge=64, le=4096)
+    openai_api_key: str | None = None
+    openai_embedding_model: str = "text-embedding-3-small"
+
+    llm_provider: Literal["openai", "rule_based"] = "rule_based"
+    openai_chat_model: str = "gpt-4.1-mini"
+    investigation_timeout_seconds: int = Field(default=120, ge=10, le=600)
+
+    auto_load_demo_data: bool = True
+    enable_docker_log_collection: bool = True
+    docker_log_tail_lines: int = Field(default=5000, ge=100, le=100000)
+
+    request_timeout_seconds: int = Field(default=30, ge=1, le=300)
+    stream_heartbeat_seconds: int = Field(default=15, ge=1, le=60)
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, value: str | list[str]) -> list[str]:
+        if isinstance(value, str):
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return value
+
+    @field_validator(
+        "data_dir",
+        "upload_dir",
+        "demo_data_dir",
+        "faiss_index_dir",
+        mode="after",
+    )
+    @classmethod
+    def ensure_relative_paths(cls, value: Path) -> Path:
+        if value.is_absolute():
+            return value
+        return Path(value)
+
+    @property
+    def resolved_data_dir(self) -> Path:
+        return self._resolve(self.data_dir)
+
+    @property
+    def resolved_upload_dir(self) -> Path:
+        return self._resolve(self.upload_dir)
+
+    @property
+    def resolved_demo_data_dir(self) -> Path:
+        return self._resolve(self.demo_data_dir)
+
+    @property
+    def resolved_faiss_index_dir(self) -> Path:
+        return self._resolve(self.faiss_index_dir)
+
+    @property
+    def max_upload_size_bytes(self) -> int:
+        return self.max_upload_size_mb * 1024 * 1024
+
+    @property
+    def should_use_openai_embeddings(self) -> bool:
+        return self.embedding_provider == "openai" and bool(self.openai_api_key)
+
+    @property
+    def should_use_openai_llm(self) -> bool:
+        return self.llm_provider == "openai" and bool(self.openai_api_key)
+
+    def create_runtime_directories(self) -> None:
+        for directory in (
+            self.resolved_data_dir,
+            self.resolved_upload_dir,
+            self.resolved_demo_data_dir,
+            self.resolved_faiss_index_dir,
+        ):
+            directory.mkdir(parents=True, exist_ok=True)
+
+    def _resolve(self, path: Path) -> Path:
+        if path.is_absolute():
+            return path
+        return self.project_root / path
+
+
+@lru_cache
+def get_settings() -> Settings:
+    settings = Settings()
+    settings.create_runtime_directories()
+    return settings
